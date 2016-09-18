@@ -1,3 +1,4 @@
+import logging
 import urllib.parse
 
 import simplejson as json
@@ -23,7 +24,7 @@ class BotApiClient(object):
 
     def _parse_response(self, response):
         data = json.loads(response.body)
-        print(data)
+        logging.debug(data)
         if not data['ok']:
             raise BotApiError(data['description'])
         return data['result']

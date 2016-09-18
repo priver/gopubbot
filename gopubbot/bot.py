@@ -1,3 +1,4 @@
+import logging
 import os.path
 import signal
 import ssl
@@ -116,7 +117,7 @@ class Bot(object):
 
     @gen.coroutine
     def process_update(self, update):
-        print(update)
+        logging.debug(update)
         for update_type in self._update_handlers.keys():
             if update_type in update:
                 for handler in self._update_handlers[update_type]:
