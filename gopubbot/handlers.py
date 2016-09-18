@@ -4,10 +4,10 @@ from tornado.options import options
 
 
 class WebHookHandler(tornado.web.RequestHandler):
-    """Telegram bot API webhook handler."""
+    """Bot API webhook handler."""
 
     def post(self, token):
-        if token == options.telegram_api_token:
+        if token == options.bot_api_token:
             try:
                 print(json.loads(self.request.body))
             except json.JSONDecodeError:
