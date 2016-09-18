@@ -37,6 +37,7 @@ def run():
         debug=options.debug,
     )
     bot.add_update_handler('message', handlers.handle_message)
+    bot.add_update_handler('callback_query', handlers.handle_callback_query)
     bot.start()
 
 if __name__ == '__main__':

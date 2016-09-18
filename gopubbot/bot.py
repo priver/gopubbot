@@ -6,6 +6,7 @@ import simplejson as json
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
+from redis import Redis
 from tornado import gen
 
 from .api.client import BotApiClient
@@ -41,7 +42,7 @@ class Bot(object):
         self.ssl_certfile = ssl_certfile
 
         self.api = BotApiClient(token)
-        self.update_handlers = {
+        self._update_handlers = {
             'message': [],
             'edited_message': [],
             'inline_query': [],
@@ -49,12 +50,14 @@ class Bot(object):
             'callback_query': []
         }
 
+        self._redis = Redis(decode_responses=True)
+
         webhook_secret = get_random_string(40)
         self.webhook_url = 'https://{}:{}/webhook/{}'.format(
             public_server_name, str(public_port), webhook_secret
         )
 
-        self.app = tornado.web.Application([
+        app = tornado.web.Application([
             (
                 r'/webhook/(?P<key>[^\/]+)', WebHookHandler,
                 dict(secret=webhook_secret, process_update=self.process_update)
@@ -66,11 +69,11 @@ class Bot(object):
             ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
             ssl_ctx.load_cert_chain(os.path.abspath(ssl_certfile),
                                     os.path.abspath(ssl_keyfile))
-        self.http_server = tornado.httpserver.HTTPServer(self.app,
-                                                         ssl_options=ssl_ctx)
+        self._http_server = tornado.httpserver.HTTPServer(app,
+                                                          ssl_options=ssl_ctx)
 
     def start(self):
-        self.http_server.listen(self.port)
+        self._http_server.listen(self.port)
 
         def _signal_handler(sig, frame):
             io_loop = tornado.ioloop.IOLoop.instance()
@@ -79,21 +82,19 @@ class Bot(object):
         signal.signal(signal.SIGTERM, _signal_handler)
         signal.signal(signal.SIGINT, _signal_handler)
 
-        print(self.webhook_url)
         self.register(self.webhook_url, self.ssl_certfile)
 
         tornado.ioloop.IOLoop.instance().start()
 
     @gen.coroutine
     def stop(self):
-        self.http_server.stop()
+        self._http_server.stop()
         yield self.unregister()
         tornado.ioloop.IOLoop.instance().stop()
 
     @gen.coroutine
     def register(self, webhook_url, certificate=None):
         self.me = yield self.api.get_me()
-        print(self.me['username'])
         result = yield self.api.set_webhook(webhook_url, certificate)
         return result
 
@@ -107,16 +108,17 @@ class Bot(object):
             update_types = [update_types]
 
         for update_type in update_types:
-            if update_type not in self.update_handlers.keys():
+            if update_type not in self._update_handlers.keys():
                 raise BotError('Update type must be one of {}'.format(
-                    ', '.join(self.update_handlers.keys())))
+                    ', '.join(self._update_handlers.keys())))
 
-            self.update_handlers[update_type].append(handler)
+            self._update_handlers[update_type].append(handler)
 
     @gen.coroutine
     def process_update(self, update):
-        for update_type in self.update_handlers.keys():
-            if update[update_type]:
-                for handler in self.update_handlers[update_type]:
-                    yield handler(self.api, update)
-            break
+        print(update)
+        for update_type in self._update_handlers.keys():
+            if update_type in update:
+                for handler in self._update_handlers[update_type]:
+                    yield handler(update, self.api, self._redis)
+                break

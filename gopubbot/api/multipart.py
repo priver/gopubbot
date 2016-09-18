@@ -18,13 +18,13 @@ def _render_headers(headers):
     return '\r\n'.join(lines).encode('utf-8')
 
 
-def encode_multipart_formdata(fields, files, boundary=None):
-    """Encode a fields and files using the multipart/form-data MIME format."""
+def encode_multipart_formdata(params, files, boundary=None):
+    """Encode a params and files using the multipart/form-data MIME format."""
     body = io.BytesIO()
     if boundary is None:
         boundary = 'GoPubBotBoundary{}'.format(uuid.uuid4().hex)
 
-    for name, value in fields.items():
+    for name, value in params.items():
         headers = OrderedDict([
             ('Content-Disposition', 'form-data; name="{}"'.format(name)),
         ])

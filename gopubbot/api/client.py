@@ -29,7 +29,7 @@ class BotApiClient(object):
         return data['result']
 
     @gen.coroutine
-    def _fetch(self, method, fields=None, files=None):
+    def _fetch(self, method, params=None, files=None):
         url = self._api_url.format(method=method)
         http_method = 'GET'
         headers = HTTPHeaders()
@@ -37,11 +37,11 @@ class BotApiClient(object):
 
         if files is not None:
             http_method = 'POST'
-            body, content_type = encode_multipart_formdata(fields, files)
+            body, content_type = encode_multipart_formdata(params, files)
             headers.add('Content-Type', content_type)
-        elif fields is not None:
+        elif params is not None:
             http_method = 'POST'
-            body = urllib.parse.urlencode(fields)
+            body = urllib.parse.urlencode(params)
 
         request = HTTPRequest(url, method=http_method,
                               headers=headers, body=body)
@@ -62,9 +62,29 @@ class BotApiClient(object):
         return result
 
     @gen.coroutine
-    def send_message(self, chat_id, text):
-        result = yield self._fetch('sendMessage', {
+    def send_message(self, chat_id, text, parse_mode=None, reply_markup=None):
+        params = {
             'chat_id': chat_id,
-            'text': text
-        })
+            'text': text,
+        }
+        if parse_mode is not None:
+            params['parse_mode'] = parse_mode
+        if reply_markup is not None:
+            params['reply_markup'] = json.dumps(reply_markup)
+        result = yield self._fetch('sendMessage', params)
+        return result
+
+    @gen.coroutine
+    def edit_message_text(self, chat_id, message_id, text, parse_mode=None,
+                          reply_markup=None):
+        params = {
+            'chat_id': chat_id,
+            'message_id': message_id,
+            'text': text,
+        }
+        if parse_mode is not None:
+            params['parse_mode'] = parse_mode
+        if reply_markup is not None:
+            params['reply_markup'] = json.dumps(reply_markup)
+        result = yield self._fetch('editMessageText', params)
         return result
