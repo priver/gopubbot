@@ -115,7 +115,7 @@ class Bot(object):
 
     @gen.coroutine
     def process_update(self, update):
-        for update_type in UPDATE_TYPES:
+        for update_type in self.update_handlers.keys():
             if update[update_type]:
                 for handler in self.update_handlers[update_type]:
                     yield handler(self.api, update)
