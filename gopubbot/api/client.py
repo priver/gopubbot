@@ -60,3 +60,11 @@ class BotApiClient(object):
             files = {'certificate': certificate}
         result = yield self._fetch('setWebhook', {'url': url}, files)
         return result
+
+    @gen.coroutine
+    def send_message(self, chat_id, text):
+        result = yield self._fetch('sendMessage', {
+            'chat_id': chat_id,
+            'text': text
+        })
+        return result

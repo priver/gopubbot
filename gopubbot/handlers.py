@@ -1,15 +1,10 @@
-import simplejson as json
-import tornado.web
-from tornado.options import options
+from tornado import gen
 
 
-class WebHookHandler(tornado.web.RequestHandler):
-    """Bot API webhook handler."""
-
-    def post(self, token):
-        if token == options.bot_api_token:
-            try:
-                print(json.loads(self.request.body))
-            except json.JSONDecodeError:
-                pass
-        self.set_status(204)
+@gen.coroutine
+def handle_message(api, update):
+    print(update)
+    message = 'Привет!'
+    if (update['message']['from']['username']):
+        message = 'Привет, @{}!'.format(update['message']['from']['username'])
+    yield api.send_message(update['message']['chat']['id'], message)

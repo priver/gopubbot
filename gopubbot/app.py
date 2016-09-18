@@ -4,6 +4,8 @@ import tornado.options
 from tornado.options import define, options
 
 from .bot import Bot
+from . import handlers
+
 
 define('debug', type=bool, default=False, help='debug mode')
 define('port', type=int, default=8000, help='run on the given port')
@@ -34,6 +36,7 @@ def run():
         ssl_keyfile=options.ssl_keyfile,
         debug=options.debug,
     )
+    bot.add_update_handler('message', handlers.handle_message)
     bot.start()
 
 if __name__ == '__main__':
