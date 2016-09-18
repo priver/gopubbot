@@ -122,18 +122,25 @@ def handle_callback_query(update, api, redis):
                     map(lambda id: 'user:{}'.format(id), participants)
                 )
             text = render_event_message(event_id, event_text, participants)
-            yield api.edit_message_text(
-                callback_query['message']['chat']['id'],
-                callback_query['message']['message_id'],
-                text,
-                parse_mode='Markdown',
-                reply_markup={
+            edit_kwargs = {
+                'parse_mode': 'Markdown',
+                'reply_markup': {
                     'inline_keyboard': render_event_keyboard(
                         event_id,
-                        callback_query['message']['chat']['type'] == 'private'
+                        'message' in callback_query
                     ),
                 },
-            )
+            }
+            if 'inline_message_id' in callback_query:
+                edit_kwargs.update({
+                    'inline_message_id': callback_query['inline_message_id'],
+                })
+            else:
+                edit_kwargs.update({
+                    'chat_id': callback_query['message']['chat']['id'],
+                    'message_id': callback_query['message']['message_id'],
+                })
+            yield api.edit_message_text(text, **edit_kwargs)
 
 
 @gen.coroutine

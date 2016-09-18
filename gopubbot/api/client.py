@@ -75,13 +75,20 @@ class BotApiClient(object):
         return result
 
     @gen.coroutine
-    def edit_message_text(self, chat_id, message_id, text, parse_mode=None,
+    def edit_message_text(self, text, chat_id=None, message_id=None,
+                          inline_message_id=None, parse_mode=None,
                           reply_markup=None):
         params = {
-            'chat_id': chat_id,
-            'message_id': message_id,
             'text': text,
         }
+        if (inline_message_id is not None):
+            params['inline_message_id'] = inline_message_id
+        elif (chat_id is not None and message_id is not None):
+            params['chat_id'] = chat_id
+            params['message_id'] = message_id
+        else:
+            raise BotApiError('You must specify inline_message_id or '
+                              'both chat_id and message_id')
         if parse_mode is not None:
             params['parse_mode'] = parse_mode
         if reply_markup is not None:
