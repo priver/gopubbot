@@ -2,8 +2,8 @@ import simplejson as json
 from tornado import gen
 
 
-def render_event_message(event_text, participants):
-    text = '\U0001F37A *{}*!\n\n'.format(event_text)
+def render_event_message(event_id, event_text, participants):
+    text = '\U0001F37A *{}*\n_(id: {})_\n\n'.format(event_text, event_id)
     if participants:
         users = []
         for participant in participants:
@@ -20,6 +20,20 @@ def render_event_message(event_text, participants):
         text += 'Пока никто не идет.\n'
 
     return text
+
+
+def render_event_keyboard(event_id, show_switch_query=False):
+    inline_keyboard = []
+    if show_switch_query:
+        inline_keyboard.append([
+            {'text': 'Позвать друзей', 'switch_inline_query': str(event_id)},
+        ])
+
+    inline_keyboard.append([
+        {'text': 'Я иду!', 'callback_data': 'event_add:{}'.format(event_id)},
+        {'text': 'Не пойду', 'callback_data': 'event_del:{}'.format(event_id)},
+    ])
+    return inline_keyboard
 
 
 @gen.coroutine
@@ -63,24 +77,14 @@ def handle_message(update, api, redis):
                 participants = redis.mget(
                     map(lambda id: 'user:{}'.format(id), participants)
                 )
-            text = render_event_message(event_text, participants)
+            text = render_event_message(event_id, event_text, participants)
             yield api.send_message(
                 message['chat']['id'], text,
                 parse_mode='Markdown',
                 reply_markup={
-                    'inline_keyboard': [
-                        [
-                            {
-                                'text': 'Я иду!',
-                                'callback_data': 'event_add:{}'.format(event_id)
-                            },
-                            {
-                                'text': 'Не пойду',
-                                'callback_data': 'event_del:{}'.format(event_id)
-                            },
-                        ],
-                    ],
-                })
+                    'inline_keyboard': render_event_keyboard(event_id, True),
+                },
+            )
 
 
 @gen.coroutine
@@ -117,23 +121,54 @@ def handle_callback_query(update, api, redis):
                 participants = redis.mget(
                     map(lambda id: 'user:{}'.format(id), participants)
                 )
-            text = render_event_message(event_text, participants)
+            text = render_event_message(event_id, event_text, participants)
             yield api.edit_message_text(
                 callback_query['message']['chat']['id'],
                 callback_query['message']['message_id'],
                 text,
                 parse_mode='Markdown',
                 reply_markup={
-                    'inline_keyboard': [
-                        [
-                            {
-                                'text': 'Я иду!',
-                                'callback_data': 'event_add:{}'.format(event_id)
-                            },
-                            {
-                                'text': 'Не пойду',
-                                'callback_data': 'event_del:{}'.format(event_id)
-                            },
-                        ],
-                    ],
-                })
+                    'inline_keyboard': render_event_keyboard(
+                        event_id,
+                        callback_query['message']['chat']['type'] == 'private'
+                    ),
+                },
+            )
+
+
+@gen.coroutine
+def handle_inline_query(update, api, redis):
+    inline_query = update['inline_query']
+    try:
+        event_id = int(inline_query['query'])
+    except ValueError:
+        pass
+    else:
+        event_key = 'event:{}:text'.format(event_id)
+        event_text = redis.get(event_key)
+        if event_text:
+            participants_key = 'event:{}:participants'.format(event_id)
+            participants = redis.smembers(participants_key)
+            if participants:
+                participants = redis.mget(
+                    map(lambda id: 'user:{}'.format(id), participants)
+                )
+            text = render_event_message(event_id, event_text, participants)
+            yield api.answer_inline_query(
+                inline_query['id'],
+                [
+                    {
+                        'type': 'contact',
+                        'id': str(event_id),
+                        'phone_number': '(id: {})'.format(event_id),
+                        'first_name': event_text,
+                        'input_message_content': {
+                            'message_text': text,
+                            'parse_mode': 'Markdown',
+                        },
+                        'reply_markup': {
+                            'inline_keyboard': render_event_keyboard(event_id),
+                        },
+                    },
+                ],
+            )

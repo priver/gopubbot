@@ -88,3 +88,17 @@ class BotApiClient(object):
             params['reply_markup'] = json.dumps(reply_markup)
         result = yield self._fetch('editMessageText', params)
         return result
+
+    @gen.coroutine
+    def answer_inline_query(self, inline_query_id, results, cache_time=None,
+                            is_personal=None):
+        params = {
+            'inline_query_id': inline_query_id,
+            'results': json.dumps(results),
+        }
+        if cache_time is not None:
+            params['cache_time'] = cache_time
+        if is_personal is not None:
+            params['is_personal'] = json.dumps(is_personal)
+        result = yield self._fetch('answerInlineQuery', params)
+        return result

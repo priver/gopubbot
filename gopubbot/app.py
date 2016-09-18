@@ -38,6 +38,7 @@ def run():
     )
     bot.add_update_handler('message', handlers.handle_message)
     bot.add_update_handler('callback_query', handlers.handle_callback_query)
+    bot.add_update_handler('inline_query', handlers.handle_inline_query)
     bot.start()
 
 if __name__ == '__main__':
