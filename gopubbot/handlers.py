@@ -1,20 +1,23 @@
+import html
+
 import simplejson as json
 from tornado import gen
 
 
 def render_event_message(event_id, event_text, participants):
-    text = '\U0001F37A *{}*\n_(id: {})_\n\n'.format(event_text, event_id)
+    text = '\U0001F37A <b>{}</b>\n<i>(id: {})</i>\n\n'.format(event_text,
+                                                              event_id)
     if participants:
         users = []
         for participant in participants:
             user = json.loads(participant)
             if 'username' in user:
-                users.append('@' + user['username'])
+                name = '@' + user['username']
             else:
                 name = user['first_name']
                 if 'last_name' in user:
                     name += ' ' + user['last_name']
-                users.append(name)
+            users.append(html.escape(name))
         text += 'Идут ({}):\n{}\n'.format(len(users), ', '.join(users))
     else:
         text += 'Пока никто не идет.\n'
@@ -80,7 +83,7 @@ def handle_message(update, api, redis):
             text = render_event_message(event_id, event_text, participants)
             yield api.send_message(
                 message['chat']['id'], text,
-                parse_mode='Markdown',
+                parse_mode='HTML',
                 reply_markup={
                     'inline_keyboard': render_event_keyboard(event_id, True),
                 },
@@ -123,7 +126,7 @@ def handle_callback_query(update, api, redis):
                 )
             text = render_event_message(event_id, event_text, participants)
             edit_kwargs = {
-                'parse_mode': 'Markdown',
+                'parse_mode': 'HTML',
                 'reply_markup': {
                     'inline_keyboard': render_event_keyboard(
                         event_id,
@@ -171,7 +174,7 @@ def handle_inline_query(update, api, redis):
                         'first_name': event_text,
                         'input_message_content': {
                             'message_text': text,
-                            'parse_mode': 'Markdown',
+                            'parse_mode': 'HTML',
                         },
                         'reply_markup': {
                             'inline_keyboard': render_event_keyboard(event_id),
