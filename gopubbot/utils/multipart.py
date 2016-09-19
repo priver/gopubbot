@@ -5,12 +5,14 @@ import os.path
 import uuid
 from collections import OrderedDict
 
+
 DEFAULT_MIME_TYPE = 'application/octet-stream'
+
 
 stream_writer = codecs.getwriter('utf-8')
 
 
-def _render_headers(headers):
+def render_headers(headers):
     lines = []
     for name, value in headers.items():
         lines.append('{}: {}'.format(name, value))
@@ -29,7 +31,7 @@ def encode_multipart_formdata(params, files, boundary=None):
             ('Content-Disposition', 'form-data; name="{}"'.format(name)),
         ])
         body.write('--{}\r\n'.format(boundary).encode('utf-8'))
-        body.write(_render_headers(headers))
+        body.write(render_headers(headers))
 
         if isinstance(value, (int, float)):
             value = str(value)
@@ -52,7 +54,7 @@ def encode_multipart_formdata(params, files, boundary=None):
             ),
         ])
         body.write('--{}\r\n'.format(boundary).encode('utf-8'))
-        body.write(_render_headers(headers))
+        body.write(render_headers(headers))
 
         with open(file_path, 'rb') as f:
             body.write(f.read())

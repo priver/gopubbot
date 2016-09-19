@@ -6,11 +6,8 @@ from tornado import gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import HTTPHeaders
 
-from .multipart import encode_multipart_formdata
-
-
-class BotApiError(Exception):
-    """Bot API Error."""
+from ..utils.multipart import encode_multipart_formdata
+from .exceptions import BotApiError
 
 
 class BotApiClient(object):
@@ -51,8 +48,7 @@ class BotApiClient(object):
 
     @gen.coroutine
     def get_me(self):
-        result = yield self._fetch('getMe')
-        return result
+        return (yield self._fetch('getMe'))
 
     @gen.coroutine
     def set_webhook(self, url, certificate=None):
