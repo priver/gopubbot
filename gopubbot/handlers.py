@@ -89,25 +89,17 @@ class PubHandler(UpdateHandler):
                     map(lambda id: 'user:{}'.format(id), participants)
                 )
             text = self.render_event_message(event_id, event_text, participants)
-            edit_kwargs = {
-                'parse_mode': 'HTML',
-                'reply_markup': {
+            yield self.api.edit_message_text(
+                text,
+                message=self.message,
+                inline_message_id=self.inline_message_id,
+                parse_mode='HTML',
+                reply_markup={
                     'inline_keyboard': self.render_event_keyboard(
-                        event_id,
-                        self.message is not None
+                        event_id, self.message is not None
                     ),
                 },
-            }
-            if self.inline_message_id is not None:
-                edit_kwargs.update({
-                    'inline_message_id': self.inline_message_id,
-                })
-            else:
-                edit_kwargs.update({
-                    'chat_id': self.message['chat']['id'],
-                    'message_id': self.message['message_id'],
-                })
-            yield self.api.edit_message_text(text, **edit_kwargs)
+            )
 
     @gen.coroutine
     def handle_inline_query(self):
