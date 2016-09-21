@@ -24,7 +24,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     entry_points={
-        'console_scripts': 'gopubbot = gopubbot.pub:run'
+        'console_scripts': 'gopubbot = gopubbot.app:run'
     },
     install_requires=requirements,
     zip_safe=False,

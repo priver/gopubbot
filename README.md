@@ -1,3 +1,3 @@
 # GoPubBot
 
-Pub Telegram bot.
+Telegram Pub Bot.

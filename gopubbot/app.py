@@ -4,7 +4,10 @@ import tornado.options
 from tornado.options import define, options
 
 from .bot.app import BotApp
-from .handlers import PubHandler
+from .handlers import (
+    EventBotCommandHandler, EventMessageHandler, EventInlineQueryHandler,
+    EventCallbackQueryHandler
+)
 
 
 define('debug', type=bool, default=False, help='debug mode')
@@ -26,7 +29,13 @@ if os.path.isfile(options.config):
 
 def run():
     """Start bot server."""
-    bot_app = BotApp(
+    BotApp(
+        {
+            'bot_command': [('/go', EventBotCommandHandler)],
+            'message': [EventMessageHandler],
+            'inline_query': [EventInlineQueryHandler],
+            'callback_query': [EventCallbackQueryHandler]
+        },
         token=options.bot_api_token,
         public_server_name=options.public_server_name,
         public_port=options.public_port,
@@ -35,9 +44,7 @@ def run():
         ssl_certfile=options.ssl_certfile,
         ssl_keyfile=options.ssl_keyfile,
         debug=options.debug,
-    )
-    bot_app.add_update_handler(PubHandler)
-    bot_app.start()
+    ).start()
 
 if __name__ == '__main__':
     run()

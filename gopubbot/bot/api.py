@@ -11,15 +11,15 @@ from .exceptions import BotApiError
 
 
 class BotApiClient(object):
-    """Bot API client."""
+    """Telegram Bot API client."""
 
     def __init__(self, token):
         self._http_client = AsyncHTTPClient(force_instance=True)
-        self._api_url = 'https://api.telegram.org/bot{token}/{{method}}'.format(
+        self.api_url = 'https://api.telegram.org/bot{token}/{{method}}'.format(
             token=token
         )
 
-    def _parse_response(self, response):
+    def parse_response(self, response):
         data = json.loads(response.body)
         logging.debug(data)
         if not data['ok']:
@@ -27,8 +27,8 @@ class BotApiClient(object):
         return data['result']
 
     @gen.coroutine
-    def _fetch(self, method, params=None, files=None):
-        url = self._api_url.format(method=method)
+    def fetch(self, method, params=None, files=None):
+        url = self.api_url.format(method=method)
         http_method = 'GET'
         headers = HTTPHeaders()
         body = None
@@ -44,18 +44,18 @@ class BotApiClient(object):
         request = HTTPRequest(url, method=http_method,
                               headers=headers, body=body)
         response = yield self._http_client.fetch(request)
-        return self._parse_response(response)
+        return self.parse_response(response)
 
     @gen.coroutine
     def get_me(self):
-        return (yield self._fetch('getMe'))
+        return (yield self.fetch('getMe'))
 
     @gen.coroutine
     def set_webhook(self, url, certificate=None):
         files = None
         if certificate is not None:
             files = {'certificate': certificate}
-        return (yield self._fetch('setWebhook', {'url': url}, files))
+        return (yield self.fetch('setWebhook', {'url': url}, files))
 
     @gen.coroutine
     def send_message(self, chat_id, text, parse_mode=None,
@@ -75,7 +75,7 @@ class BotApiClient(object):
             params['reply_to_message_id'] = reply_to_message_id
         if reply_markup is not None:
             params['reply_markup'] = json.dumps(reply_markup)
-        return (yield self._fetch('sendMessage', params))
+        return (yield self.fetch('sendMessage', params))
 
     @gen.coroutine
     def edit_message_text(self, text, chat_id=None, message_id=None,
@@ -102,7 +102,7 @@ class BotApiClient(object):
             params['disable_web_page_preview'] = disable_web_page_preview
         if reply_markup is not None:
             params['reply_markup'] = json.dumps(reply_markup)
-        return (yield self._fetch('editMessageText', params))
+        return (yield self.fetch('editMessageText', params))
 
     @gen.coroutine
     def answer_inline_query(self, inline_query_id, results, cache_time=None,
@@ -122,4 +122,4 @@ class BotApiClient(object):
             params['switch_pm_text'] = switch_pm_text
         if switch_pm_parameter is not None:
             params['switch_pm_parameter'] = switch_pm_parameter
-        return (yield self._fetch('answerInlineQuery', params))
+        return (yield self.fetch('answerInlineQuery', params))

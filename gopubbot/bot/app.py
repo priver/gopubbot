@@ -12,15 +12,16 @@ from tornado import gen
 
 from ..utils.crypto import get_random_string
 
+from .update import UpdateDispatcher, UpdateHandlerSpec
 from .api import BotApiClient
 
 
 class WebHookHandler(tornado.web.RequestHandler):
-    """Bot webhook handler."""
+    """Webhook updates handler."""
 
-    def initialize(self, secret, update_handlers):
+    def initialize(self, secret, dispatcher):
         self.secret = secret
-        self.update_handlers = update_handlers
+        self.dispatcher = dispatcher
 
     @gen.coroutine
     def post(self, key):
@@ -29,24 +30,31 @@ class WebHookHandler(tornado.web.RequestHandler):
         if key == self.secret:
             update = json.loads(self.request.body)
             logging.info(update)
-            for handler in self.update_handlers:
-                yield handler.dispatch(update)
+            self.dispatcher.dispatch(update)
 
 
 class BotApp(object):
-    """The Bot himself."""
+    """Bot tornado web application."""
 
-    def __init__(self, token, public_server_name, public_port=443, port=8000,
-                 use_ssl=False, ssl_certfile=None, ssl_keyfile=None,
-                 debug=False):
+    def __init__(self, update_handlers, token, public_server_name,
+                 public_port=443, port=8000, use_ssl=False, ssl_certfile=None,
+                 ssl_keyfile=None, debug=False):
         self.debug = debug
         self.port = port
         self.ssl_certfile = ssl_certfile
 
         self.api = BotApiClient(token)
-        self.update_handlers = []
-
         self.redis = Redis(decode_responses=True)
+
+        self.update_handlers = {}
+        for update_type, update_type_handlers in update_handlers.items():
+            self.update_handlers[update_type] = []
+            for spec in update_type_handlers:
+                if not isinstance(spec, UpdateHandlerSpec):
+                    spec = UpdateHandlerSpec(spec)
+                spec.init_handler(self.api, self.redis)
+                self.update_handlers[update_type].append(spec)
+        self.dispatcher = UpdateDispatcher(self.update_handlers)
 
         webhook_secret = get_random_string(40)
         self.webhook_url = 'https://{}:{}/webhook/{}'.format(
@@ -54,11 +62,8 @@ class BotApp(object):
         )
 
         app = tornado.web.Application([
-            (
-                r'/webhook/(?P<key>[^\/]+)', WebHookHandler,
-                dict(secret=webhook_secret,
-                     update_handlers=self.update_handlers)
-            ),
+            (r'/webhook/(?P<key>[^\/]+)', WebHookHandler,
+             dict(secret=webhook_secret, dispatcher=self.dispatcher)),
         ], debug=self.debug)
 
         ssl_ctx = None
@@ -99,6 +104,3 @@ class BotApp(object):
     def unregister(self):
         result = yield self.api.set_webhook('')
         return result
-
-    def add_update_handler(self, handler):
-        self.update_handlers.append(handler(self.api, self.redis))
