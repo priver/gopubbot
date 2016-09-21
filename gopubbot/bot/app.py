@@ -30,7 +30,7 @@ class WebHookHandler(tornado.web.RequestHandler):
         if key == self.secret:
             update = json.loads(self.request.body)
             logging.info(update)
-            self.dispatcher.dispatch(update)
+            yield self.dispatcher.dispatch(update)
 
 
 class BotApp(object):
